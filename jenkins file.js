@@ -36,6 +36,12 @@ pipeline {
         }
     }
     post {
+        success {
+            slackSend(channel: '#your-channel', color: 'good', message: "✅ Build succeeded: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
+        }
+        failure {
+            slackSend(channel: '#your-channel', color: 'danger', message: "❌ Build failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
+        }
         always {
             sh 'docker logout'
         }
