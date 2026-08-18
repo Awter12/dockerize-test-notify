@@ -37,10 +37,10 @@ pipeline {
     }
     post {
         success {
-            slackSend(channel: 'dockerize-test-notify', color: 'good', message: "✅ Build succeeded: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
+            slackSend(channel: '#dockerize-test-notify', color: 'good', message: "✅ Build succeeded: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
         }
         failure {
-            slackSend(channel: 'dockerize-test-notify', color: 'danger', message: "❌ Build failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
+            slackSend(channel: '#dockerize-test-notify', color: 'danger', message: "❌ Build failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
         }
         always {
             sh 'docker logout'
