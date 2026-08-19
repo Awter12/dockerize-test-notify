@@ -1,13 +1,10 @@
 
-
-
 pipeline {
     agent any
     environment {
-        DOCKERHUB_CREDENTIALS = credentials('dockerhub')
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub-creds')
     }
     stages {
-
         stage('gitclone') {
             steps {
                 checkout([$class: 'GitSCM',
@@ -32,6 +29,21 @@ pipeline {
         stage('Push') {
             steps {
                 sh 'docker push bret77/dockerize-test-notify:latest'
+            }
+        }
+        stage('Deploy to Kubernetes') {
+            steps {
+                withCredentials([file(credentialsId: 'kubeconfig-devops-cluster', variable: 'KUBECONFIG')]) {
+                    sh '''
+                        kubectl apply -f k8s/configmap.yaml
+                        kubectl apply -f k8s/secret.example.yaml
+                        kubectl apply -f k8s/deployment.yaml
+                        kubectl apply -f k8s/service.yaml
+                        kubectl apply -f k8s/ingress.yaml
+                        kubectl rollout restart deployment dockerize-test-notify
+                        kubectl rollout status deployment dockerize-test-notify
+                    '''
+                }
             }
         }
     }
