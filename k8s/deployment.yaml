@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dockerize-test-notify
+  labels:
+    app: dockerize-test-notify
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dockerize-test-notify
+  template:
+    metadata:
+      labels:
+        app: dockerize-test-notify
+    spec:
+      containers:
+        - name: dockerize-test-notify
+          image: bret77/dockerize-test-notify:latest
+          ports:
+            - containerPort: 3000
