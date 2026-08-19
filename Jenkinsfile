@@ -1,4 +1,4 @@
-
+#!/usr/bin/env groovy
 pipeline {
     agent any
     environment {
@@ -49,10 +49,10 @@ pipeline {
     }
     post {
         success {
-            slackSend(channel: '#dockerize-test-notify', color: 'good', message: "✅ Build succeeded: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
+            slackSend(channel: '#general', color: 'good', message: "Build & Deploy succeeded: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
         }
         failure {
-            slackSend(channel: '#dockerize-test-notify', color: 'danger', message: "❌ Build failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
+            slackSend(channel: '#general', color: 'danger', message: "Build & Deploy failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
         }
         always {
             sh 'docker logout'
