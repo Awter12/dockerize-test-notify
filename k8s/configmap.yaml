@@ -4,4 +4,4 @@ metadata:
   name: dockerize-test-notify-config
 data:
   PORT: "3000"
-  APP_MESSAGE: "Config updated - M3 checkpoint confirmed"
+  APP_MESSAGE: "M4 rolling update test - zero downtime confirmed"
