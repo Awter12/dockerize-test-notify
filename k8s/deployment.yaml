@@ -19,3 +19,12 @@ spec:
           image: bret77/dockerize-test-notify:latest
           ports:
             - containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: dockerize-test-notify-config
+          env:
+            - name: API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: dockerize-test-notify-secret
+                  key: API_KEY
