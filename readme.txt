@@ -25,20 +25,7 @@ Slack Workspace	devops-1ra7213
 
 Production-style Kubernetes deployment for the `dockerize-test-notify` application. The app is built and pushed to Docker Hub by an existing Jenkins CI/CD pipeline, then deployed to a Kubernetes cluster with a Deployment, Service, Ingress, externalized configuration/secrets, health probes, and a fully automated, zero-downtime release process triggered directly by the pipeline.
 
-## Table of Contents
-
-- [Overview](#overview)
-- [Architecture](#architecture)
-- [Project Links](#project-links)
-- [Prerequisites](#prerequisites)
-- [Environment Setup](#environment-setup)
-- [Deploying the Application](#deploying-the-application)
-- [Verification](#verification)
-- [Configuration & Secrets Management](#configuration--secrets-management)
-- [CI/CD Integration](#cicd-integration)
-- [Repository Structure](#repository-structure)
-
-## Overview
+# Overview
 
 This deployment demonstrates a complete path from source code to a self-healing, horizontally scaled, externally routable service running on Kubernetes:
 
@@ -51,7 +38,7 @@ This deployment demonstrates a complete path from source code to a self-healing,
 | Reliability | Liveness/readiness probes, resource requests/limits, multi-replica scaling |
 | Delivery | Jenkins pipeline stage triggering `kubectl apply` + rollout on every push |
 
-## Architecture
+# Architecture
 
 ```
 Developer
@@ -88,7 +75,7 @@ kind Kubernetes Cluster (local)
    |-- Secret     (API_KEY, kept out of the image and out of git)
 ```
 
-## Project Links
+# Project Links
 
 | Item | Value |
 |---|---|
@@ -98,17 +85,10 @@ kind Kubernetes Cluster (local)
 | Application URL (local) | http://dockerize.local |
 | CI/CD | Jenkins (existing pipeline, extended with a **Deploy to Kubernetes** stage) |
 
-## Prerequisites
 
-The following tools must be installed and available on `PATH`:
+# Environment Setup
 
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-- [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl)
-- [kind](https://kind.sigs.k8s.io/)
-
-## Environment Setup
-
-### 1. Provision the cluster
+# 1. Provision the cluster
 
 ```bash
 kind create cluster --name devops-cluster --config k8s/kind-config.yaml
@@ -116,7 +96,7 @@ kind create cluster --name devops-cluster --config k8s/kind-config.yaml
 
 The `kind-config.yaml` maps host ports 80/443 into the cluster so the Ingress controller is reachable directly from `localhost`.
 
-### 2. Load the application image
+# 2. Load the application image
 
 ```bash
 docker pull bret77/dockerize-test-notify:latest
@@ -125,7 +105,7 @@ kind load docker-image bret77/dockerize-test-notify:latest --name devops-cluster
 
 Loading the image directly into the cluster avoids a registry pull and speeds up pod startup.
 
-### 3. Install the NGINX Ingress Controller
+# 3. Install the NGINX Ingress Controller
 
 ```bash
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
@@ -135,12 +115,12 @@ kubectl wait --namespace ingress-nginx \
   --timeout=120s
 ```
 
-### 4. Configure local DNS resolution
+# 4. Configure local DNS resolution
 
-Add the following entry to your hosts file so `dockerize.local` resolves to the cluster:
+Added the following entry to hosts file so `dockerize.local` resolves to the cluster:
 
 - **Windows:** `C:\Windows\System32\drivers\etc\hosts` (edit as Administrator)
-- **macOS/Linux:** `/etc/hosts` (edit with `sudo`)
+
 
 ```
 127.0.0.1 dockerize.local
@@ -160,21 +140,21 @@ kubectl apply -f k8s/ingress.yaml
 
 ## Verification
 
-### Confirm the deployment is live
+### Confirmed the deployment live
 
 ```bash
 kubectl get pods
 curl http://dockerize.local/
 ```
 
-### Validate self-healing
+# Validate self-healing
 
 ```bash
 kubectl delete pod <any-pod-name>
 kubectl get pods   # a replacement pod is scheduled automatically
 ```
 
-### Validate zero-downtime rolling updates
+# Validate zero-downtime rolling updates
 
 Terminal 1 — continuous traffic:
 
@@ -191,13 +171,13 @@ kubectl rollout status deployment dockerize-test-notify
 
 Traffic in Terminal 1 continues uninterrupted throughout the rollout.
 
-## Configuration & Secrets Management
+# Configuration & Secrets Management
 
 - Non-sensitive runtime configuration (`PORT`, `APP_MESSAGE`) is defined in `k8s/configmap.yaml` and injected as environment variables, allowing configuration changes without rebuilding the image.
 - Sensitive values (`API_KEY`) are defined in `k8s/secret.yaml`, which is excluded from version control. `k8s/secret.example.yaml` documents the required structure without real values.
 - No credentials or environment-specific configuration are baked into the container image.
 
-## CI/CD Integration
+# CI/CD Integration
 
 The existing Jenkins pipeline is extended with a deployment stage that runs after the image is built and pushed:
 
@@ -207,7 +187,7 @@ The existing Jenkins pipeline is extended with a deployment stage that runs afte
 
 Every push to the repository results in an automated, zero-downtime deployment with no manual intervention.
 
-## Repository Structure
+# Repository Structure
 
 ```
 .
