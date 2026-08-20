@@ -21,67 +21,35 @@ Slack Workspace	devops-1ra7213
 
 --------------------------------------------------------------------------------------------
 
-# Deploy Your Containerized App to Kubernetes
+# Dockerize-Test-Notify — Kubernetes Deployment
 
-Taking the containerized portfolio/API app (already built and shipped through the Jenkins CI/CD pipeline) and running it on a real Kubernetes cluster — with a Deployment, Service, Ingress, externalized config/secrets, health probes, and a fully automated, zero-downtime deploy triggered by the existing pipeline.
+Production-style Kubernetes deployment for the `dockerize-test-notify` application. The app is built and pushed to Docker Hub by an existing Jenkins CI/CD pipeline, then deployed to a Kubernetes cluster with a Deployment, Service, Ingress, externalized configuration/secrets, health probes, and a fully automated, zero-downtime release process triggered directly by the pipeline.
 
-## Links
+## Table of Contents
 
-| Item | Value |
+- [Overview](#overview)
+- [Architecture](#architecture)
+- [Project Links](#project-links)
+- [Prerequisites](#prerequisites)
+- [Environment Setup](#environment-setup)
+- [Deploying the Application](#deploying-the-application)
+- [Verification](#verification)
+- [Configuration & Secrets Management](#configuration--secrets-management)
+- [CI/CD Integration](#cicd-integration)
+- [Repository Structure](#repository-structure)
+
+## Overview
+
+This deployment demonstrates a complete path from source code to a self-healing, horizontally scaled, externally routable service running on Kubernetes:
+
+| Capability | Implementation |
 |---|---|
-| GitHub Repo | https://github.com/Awter12/dockerize-test-notify (private) |
-| Docker Hub Image | docker.io/bret77/dockerize-test-notify:latest |
-| Local Cluster | kind (`devops-cluster`) |
-| App URL (local) | http://dockerize.local |
-| CI/CD | Jenkins (existing pipeline, extended with a Deploy to Kubernetes stage) |
-
-## How to Run It Locally
-
-**Prerequisites:** Docker Desktop, `kubectl`, `kind` installed and on PATH.
-
-```bash
-# 1. Create the cluster with Ingress-ready port mappings
-kind create cluster --name devops-cluster --config k8s/kind-config.yaml
-
-# 2. Load the app image directly into the cluster (avoids slow registry pulls)
-docker pull bret77/dockerize-test-notify:latest
-kind load docker-image bret77/dockerize-test-notify:latest --name devops-cluster
-
-# 3. Install the NGINX Ingress Controller
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
-kubectl wait --namespace ingress-nginx --for=condition=ready pod --selector=app.kubernetes.io/component=controller --timeout=120s
-
-# 4. Apply the application manifests
-kubectl apply -f k8s/configmap.yaml
-kubectl apply -f k8s/secret.yaml   # copy from k8s/secret.example.yaml and fill in real values — never commit the real file
-kubectl apply -f k8s/deployment.yaml
-kubectl apply -f k8s/service.yaml
-kubectl apply -f k8s/ingress.yaml
-
-# 5. Point the local hostname at your machine (Windows: edit as Administrator)
-# Add this line to C:\Windows\System32\drivers\etc\hosts
-# 127.0.0.1 dockerize.local
-
-# 6. Confirm it's live
-kubectl get pods
-curl http://dockerize.local/
-```
-
-**To test self-healing:**
-```bash
-kubectl delete pod <any-pod-name>
-kubectl get pods   # a replacement pod appears automatically
-```
-
-**To test a zero-downtime rolling update:**
-```bash
-# In one terminal, keep hitting the app:
-while true; do curl -s http://dockerize.local/ready; echo " - $(date +%H:%M:%S)"; sleep 0.5; done
-
-# In another terminal, trigger a rollout:
-kubectl rollout restart deployment dockerize-test-notify
-kubectl rollout status deployment dockerize-test-notify
-```
+| Container orchestration | Kubernetes `Deployment` (replacing manual `docker run`) |
+| Traffic routing | NGINX Ingress Controller, hostname-based routing |
+| Configuration management | Kubernetes `ConfigMap` |
+| Secrets management | Kubernetes `Secret`, excluded from version control |
+| Reliability | Liveness/readiness probes, resource requests/limits, multi-replica scaling |
+| Delivery | Jenkins pipeline stage triggering `kubectl apply` + rollout on every push |
 
 ## Architecture
 
@@ -120,17 +88,137 @@ kind Kubernetes Cluster (local)
    |-- Secret     (API_KEY, kept out of the image and out of git)
 ```
 
-## What I Learned
+## Project Links
 
-This project made the gap between "running a container" and "running production infrastructure" concrete in a way 
-none of the earlier projects did. The biggest lesson was that Kubernetes doesn't automatically know anything about 
-your app beyond what you explicitly tell it — the port it listens on, whether it's healthy, how many copies should
-exist — and getting any of that wrong (like assuming the Dockerfile's `EXPOSE` line was the real port, when the actual
-port came from an environment variable fallback in the code) breaks things in ways that look like networking bugs but
-are really just mismatched assumptions. The self-healing and rolling-update tests were the most rewarding part: watching
-a pod get killed and instantly replaced, and watching a curl loop stay unbroken while pods were swapped underneath it, made
-Kubernetes' core value proposition click in a way no explanation could have. Wiring the existing Jenkins pipeline into the
-cluster (M5) was also a genuine lesson in production-style secrets handling — realizing a `kubeconfig` pointing at `127.0.0.1`
- only works on the machine that generated it, and that container-to-container networking on Docker Desktop needs an explicit 
- shared network and the container's real internal IP, was a debugging exercise that mirrors real infrastructure problems, not
- tutorial problems.
+| Item | Value |
+|---|---|
+| GitHub Repository | https://github.com/Awter12/dockerize-test-notify (private) |
+| Docker Hub Image | `docker.io/bret77/dockerize-test-notify:latest` |
+| Local Cluster | kind (`devops-cluster`) |
+| Application URL (local) | http://dockerize.local |
+| CI/CD | Jenkins (existing pipeline, extended with a **Deploy to Kubernetes** stage) |
+
+## Prerequisites
+
+The following tools must be installed and available on `PATH`:
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+- [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl)
+- [kind](https://kind.sigs.k8s.io/)
+
+## Environment Setup
+
+### 1. Provision the cluster
+
+```bash
+kind create cluster --name devops-cluster --config k8s/kind-config.yaml
+```
+
+The `kind-config.yaml` maps host ports 80/443 into the cluster so the Ingress controller is reachable directly from `localhost`.
+
+### 2. Load the application image
+
+```bash
+docker pull bret77/dockerize-test-notify:latest
+kind load docker-image bret77/dockerize-test-notify:latest --name devops-cluster
+```
+
+Loading the image directly into the cluster avoids a registry pull and speeds up pod startup.
+
+### 3. Install the NGINX Ingress Controller
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
+kubectl wait --namespace ingress-nginx \
+  --for=condition=ready pod \
+  --selector=app.kubernetes.io/component=controller \
+  --timeout=120s
+```
+
+### 4. Configure local DNS resolution
+
+Add the following entry to your hosts file so `dockerize.local` resolves to the cluster:
+
+- **Windows:** `C:\Windows\System32\drivers\etc\hosts` (edit as Administrator)
+- **macOS/Linux:** `/etc/hosts` (edit with `sudo`)
+
+```
+127.0.0.1 dockerize.local
+```
+
+## Deploying the Application
+
+Apply the manifests in the following order:
+
+```bash
+kubectl apply -f k8s/configmap.yaml
+kubectl apply -f k8s/secret.yaml    
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/service.yaml
+kubectl apply -f k8s/ingress.yaml
+```
+
+## Verification
+
+### Confirm the deployment is live
+
+```bash
+kubectl get pods
+curl http://dockerize.local/
+```
+
+### Validate self-healing
+
+```bash
+kubectl delete pod <any-pod-name>
+kubectl get pods   # a replacement pod is scheduled automatically
+```
+
+### Validate zero-downtime rolling updates
+
+Terminal 1 — continuous traffic:
+
+```bash
+while true; do curl -s http://dockerize.local/ready; echo " - $(date +%H:%M:%S)"; sleep 0.5; done
+```
+
+Terminal 2 — trigger a rollout:
+
+```bash
+kubectl rollout restart deployment dockerize-test-notify
+kubectl rollout status deployment dockerize-test-notify
+```
+
+Traffic in Terminal 1 continues uninterrupted throughout the rollout.
+
+## Configuration & Secrets Management
+
+- Non-sensitive runtime configuration (`PORT`, `APP_MESSAGE`) is defined in `k8s/configmap.yaml` and injected as environment variables, allowing configuration changes without rebuilding the image.
+- Sensitive values (`API_KEY`) are defined in `k8s/secret.yaml`, which is excluded from version control. `k8s/secret.example.yaml` documents the required structure without real values.
+- No credentials or environment-specific configuration are baked into the container image.
+
+## CI/CD Integration
+
+The existing Jenkins pipeline is extended with a deployment stage that runs after the image is built and pushed:
+
+1. `git clone` — pulls the latest source and manifests.
+2. `docker build` / `docker push` — builds and publishes the updated image to Docker Hub.
+3. `kubectl apply` + `kubectl rollout restart` — applies the current manifests and triggers a rolling update on the cluster, authenticated via a securely stored `kubeconfig` credential.
+
+Every push to the repository results in an automated, zero-downtime deployment with no manual intervention.
+
+## Repository Structure
+
+```
+.
+├── k8s/
+│   ├── kind-config.yaml
+│   ├── configmap.yaml
+│   ├── secret.example.yaml
+│   ├── secret.yaml            # not committed
+│   ├── deployment.yaml
+│   ├── service.yaml
+│   └── ingress.yaml
+├── Jenkinsfile
+└── README.md
+```
