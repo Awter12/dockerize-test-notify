@@ -79,7 +79,7 @@ kind Kubernetes Cluster (local)
 
 | Item | Value |
 |---|---|
-| GitHub Repository | https://github.com/Awter12/dockerize-test-notify (private) |
+| GitHub Repository | https://github.com/Awter12/dockerize-test-notify |
 | Docker Hub Image | `docker.io/bret77/dockerize-test-notify:latest` |
 | Local Cluster | kind (`devops-cluster`) |
 | Application URL (local) | http://dockerize.local |
