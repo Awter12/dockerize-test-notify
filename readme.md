@@ -75,7 +75,7 @@ kind Kubernetes Cluster (local)
    |-- Secret     (API_KEY, kept out of the image and out of git)
 ```
 
- Project Links
+ ## Project Links
 
 | Item | Value |
 |---|---|
@@ -86,7 +86,7 @@ kind Kubernetes Cluster (local)
 | CI/CD | Jenkins (existing pipeline, extended with a **Deploy to Kubernetes** stage) |
 
 
- Environment Setup
+ ## Environment Setup
 
  1. Provision the cluster
 
@@ -126,7 +126,7 @@ Added the following entry to hosts file so `dockerize.local` resolves to the clu
 127.0.0.1 dockerize.local
 ```
 
- Deploying the Application
+ ## Deploying the Application
 
 Apply the manifests in the following order:
 
@@ -171,7 +171,7 @@ kubectl rollout status deployment dockerize-test-notify
 
 Traffic in Terminal 1 continues uninterrupted throughout the rollout.
 
- Configuration & Secrets Management
+ ## Configuration & Secrets Management
 
 - Non-sensitive runtime configuration (`PORT`, `APP_MESSAGE`) is defined in `k8s/configmap.yaml` and injected as environment variables, allowing configuration changes without rebuilding the image.
 - Sensitive values (`API_KEY`) are defined in `k8s/secret.yaml`, which is excluded from version control. `k8s/secret.example.yaml` documents the required structure without real values.
@@ -187,7 +187,7 @@ The existing Jenkins pipeline is extended with a deployment stage that runs afte
 
 Every push to the repository results in an automated, zero-downtime deployment with no manual intervention.
 
- Repository Structure
+ ## Repository Structure
 
 ```
 .
