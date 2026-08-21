@@ -21,7 +21,7 @@ Slack Workspace	devops-1ra7213
 
 --------------------------------------------------------------------------------------------
 
- Dockerize-Test-Notify — Kubernetes Deployment
+ ## Dockerize-Test-Notify — Kubernetes Deployment
 
 Production-style Kubernetes deployment for the `dockerize-test-notify` application. The app is built and pushed to Docker Hub by an existing Jenkins CI/CD pipeline, then deployed to a Kubernetes cluster with a Deployment, Service, Ingress, externalized configuration/secrets, health probes, and a fully automated, zero-downtime release process triggered directly by the pipeline.
 
